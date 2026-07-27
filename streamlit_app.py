@@ -8,12 +8,29 @@ from attendai.vision import decode_image, detect_and_embed, encrypt_embedding, d
 st.set_page_config(page_title="AttendAI Vision", page_icon="👁️", layout="wide")
 init_db()
 st.markdown("""<style>
-[data-testid="stAppViewContainer"]{background:#f4f8f9}[data-testid="stSidebar"]{background:#082332}
-[data-testid="stSidebar"] *{color:#dcebed}.block-container{max-width:1500px;padding-top:1.5rem}
+[data-testid="stAppViewContainer"],[data-testid="stMain"]{background:#f4f8f9;color:#173541}
+[data-testid="stSidebar"]{background:#082332}
+[data-testid="stSidebar"] p,[data-testid="stSidebar"] label,[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,[data-testid="stSidebar"] h3,[data-testid="stSidebar"] span{color:#dcebed!important}
+.block-container{max-width:1500px;padding-top:1.5rem}
 .hero{padding:25px 30px;border-radius:18px;color:white;background:linear-gradient(135deg,#082536,#087f77);margin-bottom:18px}
-.hero h1{margin:0}.hero p{color:#c5e1e1;margin:.4rem 0 0}
+.hero h1{margin:0;color:#fff!important}.hero p{color:#d8f0ef!important;margin:.4rem 0 0}
 .metric{background:#fff;border:1px solid #e1e9eb;border-radius:14px;padding:18px}.metric small{color:#70848c}
 .metric strong{display:block;font-size:1.8rem;color:#163541}.safe{padding:10px 14px;border-radius:9px;background:#e5f8f2;color:#087967}
+[data-testid="stWidgetLabel"] p,.stMarkdown p,.stCaptionContainer p,
+[data-testid="stForm"] label p,[data-testid="stExpander"] summary p{color:#314b57!important}
+.stMarkdown .hero p{color:#d8f0ef!important}
+[data-baseweb="input"],[data-baseweb="base-input"],[data-baseweb="select"]>div,
+[data-baseweb="textarea"]{background:#fff!important;color:#173541!important;border-color:#cbdadd!important}
+[data-baseweb="input"] input,[data-baseweb="base-input"] input,[data-baseweb="textarea"] textarea{
+background:#fff!important;color:#173541!important;-webkit-text-fill-color:#173541!important}
+[data-baseweb="input"] svg,[data-baseweb="select"] svg{color:#536b75!important;fill:#536b75!important}
+[data-testid="stForm"]{background:#fff;border-color:#d8e5e7}
+[data-testid="stAlert"] p{color:inherit!important}
+.stButton>button,.stFormSubmitButton>button{background:#078c80;color:#fff;border:1px solid #06766d;font-weight:700}
+.stButton>button:hover,.stFormSubmitButton>button:hover{background:#066f67;color:#fff}
+.stDownloadButton>button{background:#fff;color:#076f67;border-color:#078c80}
+h1,h2,h3{color:#173541}hr{border-color:#d9e5e7}
 </style>""", unsafe_allow_html=True)
 
 def hero(title, subtitle):
