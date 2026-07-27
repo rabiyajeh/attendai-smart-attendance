@@ -1,70 +1,63 @@
-# AttendAI — Python Smart Attendance
+# AttendAI Vision
 
-AttendAI is a Python-first attendance platform for schools, universities, and offices. The user interface runs on Streamlit, the API runs on FastAPI, and persistent records are stored in PostgreSQL.
+A self-contained computer-vision attendance system built with Python, Streamlit, OpenCV, SQLite, pandas, and encrypted facial embeddings. It runs without FastAPI, PostgreSQL, or Docker; Docker is optional for deployment.
 
-## Stack
+## Included workflows
 
-- Streamlit and pandas for the responsive role-based web portal
-- FastAPI for authenticated REST and WebSocket services
-- PostgreSQL and SQLAlchemy for durable attendance data
-- InsightFace/OpenCV-compatible recognition worker contract
-- Argon2 passwords, JWT authorization, and encrypted facial embeddings
-- Docker Compose for local and server deployment
+- First-run administrator setup and local authentication
+- Administrator, teacher, and student roles
+- Student, user, course, and session management
+- Consent-gated facial enrollment with lighting, blur, face-count, and eye checks
+- Multiple encrypted face samples per student
+- OpenCV face detection and privacy-preserving numerical embeddings
+- Confidence-threshold recognition that leaves uncertain faces unknown
+- Present/late rules, duplicate prevention, automated absences, and manual fallback
+- Attendance correction with a required reason
+- CSV reports, audit logs, recognition confidence, and privacy controls
+- Embedded SQLite persistence in `.data/attendai.db`
+- No raw enrollment photographs stored by default
 
-This project is not configured for ChatGPT Sites hosting. Deploy the Streamlit container to Streamlit Community Cloud, Render, Railway, Fly.io, AWS, Azure, or your own Docker server.
-
-## Run with Docker
-
-1. Copy `.env.example` to `.env`.
-2. Replace `JWT_SECRET`.
-3. Generate `EMBEDDING_KEY`:
-
-   ```bash
-   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-   ```
-
-4. Start the stack:
-
-   ```bash
-   docker compose up --build
-   ```
-
-Open:
-
-- Streamlit portal: `http://localhost:8501`
-- FastAPI documentation: `http://localhost:8000/docs`
-
-## Local Python development
+## Run locally
 
 ```bash
 python -m venv .venv
 # Windows: .venv\Scripts\activate
 # Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn backend.app.main:app --reload --port 8000
 streamlit run streamlit_app.py
 ```
 
-Set `API_URL` when the API is not on `http://localhost:8000`.
+Open `http://localhost:8501`. On first launch, create the administrator account in the setup screen.
 
-## Recognition integration
+## Run with Docker
 
-Use a separate GPU-capable OpenCV/InsightFace worker. Enrollment must validate consent, lighting, blur, pose, and single-face framing before normalizing and encrypting embeddings. Live recognition must include tracking, liveness, duplicate prevention, and at least three consecutive frames above the configured threshold. Uncertain faces remain unknown.
+```bash
+docker compose up --build
+```
 
-## Privacy
+The named Docker volume preserves users, courses, attendance, audit logs, settings, and encrypted embeddings.
 
-- Raw face images are not stored by default.
-- Facial embeddings are encrypted and never returned through frontend APIs.
-- Enrollment and deletion require authorization and create audit events.
-- Manual corrections require a reason.
-- One database record per student/session is enforced.
-- Secure QR and manual verification remain available.
-- No emotion, ethnicity, or demographic inference is performed.
+## Recognition approach
+
+The built-in engine uses OpenCV Haar detection, quality gates, histogram equalization, low-frequency DCT facial descriptors, encrypted storage, and cosine similarity. It is designed to provide a complete local demonstration without external model downloads.
+
+For high-security production use, replace `attendai/vision.py` with InsightFace or a certified FaceNet deployment and add a dedicated anti-spoofing model. Facial recognition should never be the only attendance option; verified manual fallback remains available.
+
+## Privacy and security
+
+- Passwords use salted `scrypt`.
+- Facial descriptors are encrypted at rest with a locally generated Fernet key.
+- Consent is required before enrollment.
+- Biometric enrollment and deletion create audit events.
+- Embeddings are never included in reports or UI tables.
+- Unknown and uncertain faces are never assigned to the nearest student.
+- No emotion, ethnicity, gender, age, or demographic inference is performed.
+
+Back up `.data/attendai.db` and `.data/embedding.key` together. Losing the encryption key makes stored facial descriptors unrecoverable.
 
 ## Tests
 
 ```bash
 python -m pytest backend/tests -q
+python -m py_compile streamlit_app.py attendai/database.py attendai/vision.py
 ```
-
-The tests cover attendance boundaries, percentages, and recognition-threshold behavior. Add PostgreSQL integration tests and a certified liveness assessment before biometric production use.

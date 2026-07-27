@@ -1,0 +1,1 @@
+"""AttendAI standalone application package."""
