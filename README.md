@@ -1,48 +1,70 @@
-# AttendAI — AI-Powered Smart Attendance
+# AttendAI — Python Smart Attendance
 
-Production-oriented attendance platform for schools, universities, and offices. It combines a responsive role-based portal, FastAPI services, PostgreSQL persistence, real-time session updates, consent-based encrypted face embeddings, audit trails, and secure manual/QR fallback.
+AttendAI is a Python-first attendance platform for schools, universities, and offices. The user interface runs on Streamlit, the API runs on FastAPI, and persistent records are stored in PostgreSQL.
 
-## Architecture
+## Stack
 
-```text
-Browser (React/Vinext) ── REST + WebSocket ── FastAPI
-                                                  ├── PostgreSQL
-Classroom camera ── quality/liveness/model adapter ├── encrypted embeddings
-                                                  └── audit + reports
+- Streamlit and pandas for the responsive role-based web portal
+- FastAPI for authenticated REST and WebSocket services
+- PostgreSQL and SQLAlchemy for durable attendance data
+- InsightFace/OpenCV-compatible recognition worker contract
+- Argon2 passwords, JWT authorization, and encrypted facial embeddings
+- Docker Compose for local and server deployment
+
+This project is not configured for ChatGPT Sites hosting. Deploy the Streamlit container to Streamlit Community Cloud, Render, Railway, Fly.io, AWS, Azure, or your own Docker server.
+
+## Run with Docker
+
+1. Copy `.env.example` to `.env`.
+2. Replace `JWT_SECRET`.
+3. Generate `EMBEDDING_KEY`:
+
+   ```bash
+   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+   ```
+
+4. Start the stack:
+
+   ```bash
+   docker compose up --build
+   ```
+
+Open:
+
+- Streamlit portal: `http://localhost:8501`
+- FastAPI documentation: `http://localhost:8000/docs`
+
+## Local Python development
+
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Linux/macOS: source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn backend.app.main:app --reload --port 8000
+streamlit run streamlit_app.py
 ```
 
-The recognition endpoint intentionally accepts only confirmed model results. A production camera worker should use InsightFace `buffalo_l`, require one face during enrollment, normalize its vector, run passive/active liveness, and submit only after three consecutive frames exceed the configured threshold. Scores below the threshold are `unknown`; they are never assigned to the nearest student.
-
-## Quick start
-
-1. Copy `.env.example` to `.env`. Replace `JWT_SECRET` and generate `EMBEDDING_KEY` with:
-   `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
-2. Run `docker compose up --build`.
-3. Open the web app at `http://localhost:3000`, API docs at `http://localhost:8000/docs`.
-
-For local development, run `npm install && npm run dev` for the portal and install `backend/requirements.txt`, then run `uvicorn app.main:app --reload` from `backend`.
-
-## Security and privacy
-
-- Argon2 password hashes; short-lived JWT access tokens and rotating-ready refresh tokens.
-- Face vectors encrypted with Fernet; no endpoint returns embeddings.
-- Explicit consent is required. Enrollment/deletion and every attendance correction are audited.
-- Unique database constraint prevents duplicate attendance per student/session.
-- Server timestamps are authoritative. Manual corrections require a reason.
-- Secure headers, input bounds, role checks, soft-deletion fields, and least-privilege API surfaces are included.
-- Deploy behind TLS, store secrets in a secret manager, restrict CORS, rotate keys, configure retention, and use PostgreSQL encryption/backups.
-- The system does not infer emotion, ethnicity, gender, age, or other demographics.
+Set `API_URL` when the API is not on `http://localhost:8000`.
 
 ## Recognition integration
 
-Install OpenCV and InsightFace in a separate GPU-capable worker. Implement adapters for frame quality (brightness, blur, pose), multi-face rejection during enrollment, tracker IDs, cosine similarity, duplicate-vector search, multi-frame confirmation, and a certified liveness model. Keep sessions active when this worker is unavailable; teachers can use the QR/manual fallback.
+Use a separate GPU-capable OpenCV/InsightFace worker. Enrollment must validate consent, lighting, blur, pose, and single-face framing before normalizing and encrypting embeddings. Live recognition must include tracking, liveness, duplicate prevention, and at least three consecutive frames above the configured threshold. Uncertain faces remain unknown.
+
+## Privacy
+
+- Raw face images are not stored by default.
+- Facial embeddings are encrypted and never returned through frontend APIs.
+- Enrollment and deletion require authorization and create audit events.
+- Manual corrections require a reason.
+- One database record per student/session is enforced.
+- Secure QR and manual verification remain available.
+- No emotion, ethnicity, or demographic inference is performed.
 
 ## Tests
 
-- `npm run build` validates the portal.
-- `pytest backend/tests` validates attendance boundaries, percentages, and unknown-face threshold behavior.
-- Extend with PostgreSQL-backed API integration and authorization tests in CI.
+```bash
+python -m pytest backend/tests -q
+```
 
-## Production checklist
-
-Run Alembic migrations, create the first administrator via a one-time secret-backed command, configure HTTPS and trusted origins, use Redis-backed rate limiting, connect object storage for generated reports, configure monitoring, review biometric retention with counsel, and conduct a spoofing/security assessment before live biometric use.
+The tests cover attendance boundaries, percentages, and recognition-threshold behavior. Add PostgreSQL integration tests and a certified liveness assessment before biometric production use.

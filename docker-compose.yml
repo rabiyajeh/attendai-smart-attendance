@@ -13,7 +13,9 @@ services:
     ports: ["8000:8000"]
     depends_on: {db: {condition: service_healthy}}
   web:
-    build: {context: ., dockerfile: Dockerfile.frontend}
-    ports: ["3000:3000"]
+    build: {context: ., dockerfile: Dockerfile.streamlit}
+    environment:
+      API_URL: http://api:8000
+    ports: ["8501:8501"]
     depends_on: [api]
 volumes: {attendance_data: {}}
