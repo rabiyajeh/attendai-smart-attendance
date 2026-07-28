@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import pandas as pd
 import streamlit as st
 from attendai.database import init_db, query, execute, scalar, hash_password, verify_password, audit, utcnow
-from attendai.vision import decode_image, detect_and_embed, encrypt_embedding, decrypt_embedding, similarity, annotate
+from attendai.vision import decode_image, detect_and_embed, encrypt_embedding, decrypt_embedding, similarity, annotate, cv_available, CV_IMPORT_ERROR
 
 st.set_page_config(page_title="AttendAI Vision", page_icon="👁️", layout="wide")
 init_db()
@@ -85,7 +85,10 @@ with st.sidebar:
     st.caption("COMPUTER VISION ATTENDANCE")
     st.markdown(f"**{user['name']}**  \n{user['role'].title()}")
     page = st.radio("Navigation", ["Dashboard","Live Recognition","Face Enrollment","Students","Courses","Sessions & Records","Reports","Users","Audit & Privacy"], label_visibility="collapsed")
-    st.markdown('<div class="safe">● Local CV engine ready</div>', unsafe_allow_html=True)
+    if cv_available():
+        st.markdown('<div class="safe">● Local CV engine ready</div>', unsafe_allow_html=True)
+    else:
+        st.error(f"Vision engine unavailable: {CV_IMPORT_ERROR or 'OpenCV data missing'}")
     if st.button("Sign out", use_container_width=True):
         audit(user["id"], "user.logout", "user", user["id"])
         st.session_state.clear(); st.rerun()
@@ -136,6 +139,10 @@ elif page == "Courses":
 elif page == "Face Enrollment":
     role_required("admin","teacher")
     hero("Consent-based face enrollment", "Capture multiple high-quality samples. Only encrypted numerical embeddings are stored.")
+    if not cv_available():
+        st.error("OpenCV is not installed in this deployment. Reboot the app after its Python dependencies finish installing.")
+        st.code("opencv-python-headless==4.11.0.86", language="text")
+        st.stop()
     students=query("SELECT id,student_no,name,consent FROM students WHERE active=1 ORDER BY name")
     options={f"{s['student_no']} — {s['name']}":s for s in students}
     if not options: st.info("Create a student first."); st.stop()
@@ -163,6 +170,9 @@ elif page == "Face Enrollment":
 elif page == "Live Recognition":
     role_required("admin","teacher")
     hero("Live recognition", "Detect, verify, and record a face once per active session.")
+    if not cv_available():
+        st.error("OpenCV is not installed in this deployment. Reboot the app after its Python dependencies finish installing.")
+        st.stop()
     courses=query("SELECT * FROM courses ORDER BY code"); course_options={"Unassigned session":None}|{f"{c['code']} — {c['name']}":c["id"] for c in courses}
     active=query("SELECT * FROM sessions WHERE status='active' ORDER BY id DESC LIMIT 1")
     if not active:

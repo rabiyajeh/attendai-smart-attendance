@@ -1,11 +1,20 @@
 from pathlib import Path
-import cv2
 import numpy as np
 from cryptography.fernet import Fernet
 from .database import DATA_DIR
 
-CASCADE = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-EYE_CASCADE = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
+try:
+    import cv2
+    CV_IMPORT_ERROR = None
+    CASCADE = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    EYE_CASCADE = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
+except (ImportError, OSError) as error:
+    cv2 = None
+    CV_IMPORT_ERROR = str(error)
+    CASCADE = EYE_CASCADE = None
+
+def cv_available():
+    return cv2 is not None and CASCADE is not None and not CASCADE.empty()
 
 def _cipher():
     DATA_DIR.mkdir(exist_ok=True)
@@ -15,9 +24,13 @@ def _cipher():
     return Fernet(key_path.read_bytes())
 
 def decode_image(file_bytes: bytes):
+    if not cv_available():
+        raise RuntimeError(f"OpenCV is unavailable: {CV_IMPORT_ERROR or 'classifier data could not be loaded'}")
     return cv2.imdecode(np.frombuffer(file_bytes, np.uint8), cv2.IMREAD_COLOR)
 
 def detect_and_embed(image):
+    if not cv_available():
+        return None, {"ok": False, "message": f"OpenCV is unavailable: {CV_IMPORT_ERROR or 'classifier data could not be loaded'}"}
     if image is None:
         return None, {"ok": False, "message": "Invalid image."}
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
